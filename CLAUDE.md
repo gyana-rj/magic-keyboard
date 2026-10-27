@@ -8,6 +8,7 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
 - `npm run dev`: Vite dev server; serves `/api/contributions` itself (fixtures unless `GITHUB_TOKEN` is set)
 - `npm run build`: typecheck (`tsc --noEmit`) + production build to `dist/`
 - `npm test`: Vitest, once (`tests/`)
+- `/dev-music.html` (while dev runs): temporary page to listen to fixtures. Remove with the real UI.
 - `npm run fixtures`: regenerate `fixtures/*.json` (deterministic; commit the output)
 
 ## Rules
@@ -20,7 +21,8 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
 - Relative imports under `api/` and `server/` use `.js` extensions (Vercel runs them as ESM).
 - Keep the bundle small. Load Tone.js with dynamic `import()` on Play, not at startup.
 - Branding: say "for GitHub users". Never use GitHub's logo or the words "GitHub Wrapped".
-- Music must be deterministic from the data (seed any randomness from user+year).
+- Music: `src/music/mapping.ts` stays pure (no Tone import); all pitches go through `noteAt`; seed randomness from user+year.
+  Tone.js code lives only in `instruments.ts`/`player.ts`.
 - Check current docs (Tone.js, Vercel Functions) before using an API from memory.
 - Before finishing: `npm run build && npm test` must pass. Update `docs/PROGRESS.md`.
 

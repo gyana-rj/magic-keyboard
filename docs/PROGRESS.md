@@ -12,10 +12,15 @@
 - [ ] Deploy to Vercel and set `GITHUB_TOKEN` (manual)
 
 ## Phase 1: Music engine
-- [ ] Pure mapping `data → note events` + tests
-- [ ] Tone.js playback, lazy-loaded on Play; stop/replay
-- [ ] Scale/mood selection from yearly stats; tune by ear on all four fixtures
-- [ ] Verify duration is 30 s (52 beats at 104 BPM)
+- [x] Pure mapping `data → song` (`src/music/mapping.ts`), seeded from user+year
+- [x] Scale quantization, key/mode from seed, bass line, drums that follow weekly tiers, ambient pads, intro/outro
+- [x] 5 genre presets + fallback, picked from top language
+- [x] `player.ts`: Tone.js playback (lazy-loaded), per-beat playhead events, offline `renderSong`
+- [x] Tests: determinism, scale correctness, all fixtures valid, polyphony bound, 300 random datasets
+- [x] Temporary listening page: `npm run dev` then open `/dev-music.html`
+- [x] Automated audio check in headless Chromium: no clipping, no silent seconds, no console warnings, playhead fires every beat
+- [ ] **Tune by ear** (needs a human): mix levels, synth choices, tempo/pad feel per genre
+- [ ] Remove `dev-music.html` + `src/dev/` once the real UI plays songs
 
 ## Phase 2: Visual
 - [ ] Canvas heatmap with playhead synced to Transport

@@ -53,22 +53,31 @@ A **zero-contribution year is not an error**: it returns 200 with `total: 0` and
 
 ## Music mapping
 
-The mapping is a pure function `data → note events`, deterministic (any "randomness" is seeded from user+year).
+Implemented in `src/music/`: `mapping.ts` (`composeSong(data) → Song`, plain JSON, no audio), `genres.ts`,
+`scales.ts`, `prng.ts`, and the Tone.js side in `instruments.ts` + `player.ts`. Deterministic: the seed is
+`hash(lowercase(user) + ":" + year)`; each week gets its own sub-stream, so editing one week never shifts another.
 
-- **Time:** 52 weeks = 52 beats. At 104 BPM that is 13 bars of 4/4 = exactly 30.0 s. One beat per week.
-- **Pitch:** 7 weekdays = 7 degrees of a scale (Sun→degree 1 … Sat→degree 7). Inside a beat, active days
-  sound as a quick strum from Sunday to Saturday; inactive days are silent, so an empty week is a rest.
-- **Level 0-4 → velocity and layering:**
-  - 0: silent
-  - 1: soft note (velocity ≈ 0.25)
-  - 2: medium (≈ 0.45)
-  - 3: strong (≈ 0.7) + octave doubling
-  - 4: loud (≈ 0.95) + octave doubling + bass note and percussion accent on the beat
-- **Scale/mood from the whole year** (ideas to tune by ear): busy and steady → major; weekend-heavy or sparse →
-  minor pentatonic (never sounds "wrong"); top language can pick the timbre (synth/pluck/bell).
-- **Shape:** a light pad and kick under every non-empty week keep a long quiet stretch from sounding broken; a
-  final held chord is the 30 s mark.
-- **Offline render:** Tone.Offline renders the same events to a buffer for a downloadable audio clip (stretch).
+- **Time:** 52 weeks = 52 beats, one beat per week, plus a 2-beat intro and 2-beat outro (56 beats). Tempo 104-120 BPM
+  by genre, so the 52 weeks last 26-30 s and the whole song about 29-33 s including the ringing final chord.
+- **Quantized to a scale:** every pitch comes from `noteAt(root, mode, degree, octave)`, so nothing can be out of key.
+  Root (12 keys) and mode are picked from the seed within the genre's allowed modes (ionian, dorian, lydian,
+  mixolydian, aeolian). A chord progression (root degree per bar, 13 bars) is picked from the seed.
+- **Pitch:** 7 weekdays = 7 degrees of the scale (Sun = degree 1 … Sat = 7). A week's active days are strummed across its
+  beat, ascending or descending (seeded per week), in octave 4 or sometimes 5.
+- **Level 0-4 → velocity and layering:** 1 = 0.25, 2 = 0.45, 3 = 0.7 + octave-down doubling, 4 = 0.95 + doubling.
+- **Weekly tier (0-3)** is the week's level sum relative to the year's 90th percentile. It drives the rhythm section:
+  - tier 0 (empty week): no drums or bass; the pad carries on and an occasional soft "sparkle" bell plays
+  - tier 1: kick, bass on the beat · tier 2: + hats and the full bass pattern · tier 3: + snare, fill on the bar's last beat
+- **Pads never stop:** one triad per bar for the whole song, fuller when the bar is empty, softer when busy. A year
+  with zero contributions is a pure ambient piece.
+- **Genre** comes from the most-used language that has a preset (first match in `topLanguages`), else the fallback (lo-fi):
+  lo-fi (Python, Ruby, PHP…), synthwave (TypeScript, JavaScript, Swift…), chiptune (C, C++, Rust, Zig…),
+  house (Go, Java, Kotlin, C#…), ambient (Haskell, Elixir, OCaml…; also any year with 0 contributions).
+  A preset sets tempo range, allowed modes, drum and bass patterns (one 8-step bar each) and the synth voicing.
+- **Bounded polyphony:** at most `MAX_POLYPHONY` (14) events sound at once; asserted in tests, including random and maxed-out data.
+- **Player:** Tone.js is imported on first Play. Events are scheduled on `Tone.getTransport()` in ticks; a per-beat
+  callback goes through `Tone.getDraw()` so visuals line up with what you hear. `renderSong` renders offline for
+  tests and a future audio download. The mix has 3 dB headroom plus a limiter.
 
 ## Visual and share
 
@@ -80,7 +89,7 @@ The mapping is a pure function `data → note events`, deterministic (any "rando
 ## Phases
 
 0. **Foundation** (this session): docs, scaffold, `api/contributions`, fixtures, tests, CI-ready build.
-1. **Music engine:** mapping function + unit tests, Tone.js playback (lazy loaded), play/stop, tune by ear on fixtures.
+1. **Music engine:** mapping function + unit tests, Tone.js playback (lazy loaded), play/stop. Mapping and player are built; tuning by ear is ongoing via `/dev-music.html`.
 2. **Visual:** synced canvas playhead and note pulses; responsive layout; reduced-motion handling.
 3. **Share:** PNG card, share link and URL state, copy/download buttons.
 4. **Polish and launch:** error and empty states, a11y, Open Graph image, README with GIF, Vercel deploy,
