@@ -6,16 +6,21 @@ import { canNativeShare, copyText, downloadBlob, nativeShare } from '../share/ac
 import { CARD_FORMATS, canvasToBlob, renderCard, type CardFormat } from '../share/card';
 import { shareLinks } from '../share/links';
 import { buildCardModel, cardFilename, shareText, wavFilename } from '../share/model';
+import { useNearViewport } from '../lazy';
 import { shareUrl } from '../url';
+import { VideoPanel } from './VideoPanel';
 
 interface Props {
   data: ContributionData;
   song: Song;
+  /** Stops the on-page player (the video export needs the audio engine to itself). */
+  onExportStart?: () => void;
+  onExportBusy?: (busy: boolean) => void;
 }
 
 const FORMATS = Object.keys(CARD_FORMATS) as CardFormat[];
 
-export function SharePanel({ data, song }: Props) {
+export function SharePanel({ data, song, onExportStart, onExportBusy }: Props) {
   const model = useMemo(() => buildCardModel(data, song), [data, song]);
   const url = useMemo(() => shareUrl(location.origin, data.user, data.year), [data]);
   const links = useMemo(() => shareLinks(shareText(model), url), [model, url]);
@@ -24,8 +29,11 @@ export function SharePanel({ data, song }: Props) {
   const [note, setNote] = useState('');
   const [rendering, setRendering] = useState(false);
   const timer = useRef<number>(0);
+  const root = useRef<HTMLElement>(null);
+  const near = useNearViewport(root); // draw the card only once it is about to be seen
 
   useEffect(() => {
+    if (!near) return;
     let revoke = '';
     let alive = true;
     setImage(null);
@@ -40,7 +48,7 @@ export function SharePanel({ data, song }: Props) {
       alive = false;
       if (revoke) URL.revokeObjectURL(revoke);
     };
-  }, [data, song, format]);
+  }, [data, song, format, near]);
 
   const say = (text: string) => {
     setNote(text);
@@ -83,7 +91,7 @@ export function SharePanel({ data, song }: Props) {
   const f = CARD_FORMATS[format];
 
   return (
-    <section class="share" aria-labelledby="share-h">
+    <section class="share" aria-labelledby="share-h" ref={root}>
       <h2 id="share-h">Share your symphony</h2>
 
       <div class="seg" role="radiogroup" aria-label="Card format">
@@ -141,6 +149,8 @@ export function SharePanel({ data, song }: Props) {
           {rendering ? 'Rendering song…' : 'Download song (WAV)'}
         </button>
       </div>
+
+      <VideoPanel data={data} song={song} onStart={() => onExportStart?.()} onBusyChange={(b) => onExportBusy?.(b)} />
 
       <p class="note-live" role="status">
         {note}

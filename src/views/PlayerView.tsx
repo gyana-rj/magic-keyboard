@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ContributionData } from '../../shared/types';
 import { GENRES } from '../music/genres';
 import { composeSong } from '../music/mapping';
-import { createPlayer, unlockAudio, type Player } from '../music/player';
+import { unlockAudio } from '../music/audio';
+import { createPlayer, type Player } from '../music/player';
 import { useWarmAudio } from '../useWarmAudio';
 import { keyName } from '../music/scales';
 import { busiestWeek, longestStreak, weekRange } from '../stats';
 import { BeatClock } from '../visual/clock';
 import { PALETTES } from '../visual/palettes';
 import { Visual } from '../visual/Visual';
-import { SharePanel } from './SharePanel';
+import { useLazy } from '../lazy';
 
 interface Props {
   data: ContributionData;
@@ -29,9 +30,11 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
   const attempt = useRef(0); // lets Stop cancel a Play that is still waiting for the audio unlock
   const [status, setStatus] = useState<Status>('idle');
   const [week, setWeek] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false); // the video export owns the audio engine while it records
 
   useWarmAudio(); // shared-link arrivals have no earlier gesture; warm up on the first touch
 
+  const share = useLazy(() => import('./SharePanel')); // below the fold: its own chunk
   const busiest = useMemo(() => busiestWeek(data.weeks), [data]);
   const streak = useMemo(() => longestStreak(data.weeks, data.year), [data]);
 
@@ -70,6 +73,14 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
       if (player.current === p) setStatus('playing');
     } catch {
       if (player.current === p) setStatus('failed');
+    }
+  }
+
+  /** Stops playback if it is running (used before the video export starts). */
+  function halt() {
+    if (status === 'playing' || status === 'starting') {
+      stop();
+      setStatus('idle');
     }
   }
 
@@ -131,7 +142,7 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
         </p>
       </section>
 
-      <button class={`cta play ${playing ? 'on' : ''}`} onClick={toggle} aria-pressed={playing}>
+      <button class={`cta play ${playing ? 'on' : ''}`} onClick={toggle} aria-pressed={playing} disabled={exporting}>
         {playing ? (
           <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
@@ -171,7 +182,9 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
         </div>
       </dl>
 
-      <SharePanel data={data} song={song} />
+      <p class="fine foot"><a href="/about">About &amp; privacy</a></p>
+
+      {share ? <share.SharePanel data={data} song={song} onExportStart={halt} onExportBusy={setExporting} /> : <div class="share-placeholder" aria-hidden="true" />}
     </main>
   );
 }

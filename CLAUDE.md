@@ -28,7 +28,9 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
   server validators and escape everything injected into HTML (`server/meta.ts`). OG image = SVG built in `server/og.ts`,
   rasterized by resvg-js with the embedded font (don't use `@vercel/og`: its Node build doesn't load outside Next).
   Cards reuse `drawFrame` and `buildCardModel`; keep card text free of forbidden branding (tested).
-- Keep the bundle small. Load Tone.js with dynamic `import()` on Play, not at startup.
+- Keep the bundle small: Tone.js, the player, the share panel and `src/video/` are lazy chunks. Landing may only import
+  `music/audio.ts` (unlock helpers), never `music/player.ts`. Video MP4 only with explicit H.264+AAC codecs (see `video/formats.ts`).
+- API abuse protection lives in `server/` (limiter, cache, strict params); new endpoints must use `runtime.limiter` and `runtime.source`.
 - Branding: say "for GitHub users". Never use GitHub's logo or the words "GitHub Wrapped".
 - Music: `src/music/mapping.ts` stays pure (no Tone import); all pitches go through `noteAt`; seed randomness from user+year.
   Tone.js code lives only in `instruments.ts`/`player.ts`.
@@ -39,3 +41,4 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
 - Cloud sandboxes may export their own `GITHUB_TOKEN`; run `env -u GITHUB_TOKEN npm run dev` to get fixtures.
 - GitHub returns 53 calendar columns per year; `normalizeUser` folds them to 52.
 - Zero contributions is valid data (200, `total: 0`), not an error.
+- Don't `pkill -f` a pattern that also appears in your own command line (it kills your shell); `scripts/gen-icons.mjs` needs Playwright.

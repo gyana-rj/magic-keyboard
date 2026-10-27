@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FIXTURES } from '../server/fixtures';
 import { composeSong } from '../src/music/mapping';
 import { BeatClock } from '../src/visual/clock';
+import { GridScene } from '../src/visual/scene';
 import { cellX, cellY, COLS, computeLayout, ROWS } from '../src/visual/layout';
 import { Particles } from '../src/visual/particles';
 import { PULSE_BEATS, activePulses, buildPulses, cellBeats, pulsesBetween } from '../src/visual/pulses';
@@ -154,5 +155,58 @@ describe('Particles', () => {
       return p.items;
     };
     expect(run()).toEqual(run());
+  });
+});
+
+describe('GridScene', () => {
+  const data = FIXTURES.active;
+  const song = composeSong(data);
+  const layout = computeLayout(1000);
+
+  it('is dim before the song starts and fully lit after it ends', () => {
+    const scene = new GridScene(data, song);
+    const before = scene.frame(layout, -1, 0, false);
+    expect(before.pulses).toEqual([]);
+    expect(before.beat).toBe(-1);
+    const stopped = scene.frame(layout, null, 10, false);
+    expect(stopped.beat).toBeNull();
+  });
+
+  it('throws sparks only for loud notes and only while animating', () => {
+    const scene = new GridScene(data, song);
+    let now = 0;
+    let max = 0;
+    for (let beat = 0; beat < song.totalBeats; beat += 0.1) {
+      now += 50;
+      max = Math.max(max, scene.frame(layout, beat, now, false).particles.length);
+    }
+    expect(max).toBeGreaterThan(0);
+
+    const calm = new GridScene(data, song);
+    now = 0;
+    let calmMax = 0;
+    for (let beat = 0; beat < song.totalBeats; beat += 0.1) {
+      now += 50;
+      const f = calm.frame(layout, beat, now, true); // reduced motion
+      calmMax = Math.max(calmMax, f.particles.length, f.pulses.length);
+    }
+    expect(calmMax).toBe(0);
+  });
+
+  it('is deterministic: same song, same sparks', () => {
+    const run = () => {
+      const s = new GridScene(data, song);
+      let last = s.frame(layout, 0, 0, false);
+      for (let i = 1; i <= 120; i++) last = s.frame(layout, i * 0.2, i * 100, false);
+      return last.particles.map((p) => [Math.round(p.x), Math.round(p.y)]);
+    };
+    expect(run()).toEqual(run());
+  });
+
+  it('reset clears sparks', () => {
+    const s = new GridScene(data, song);
+    for (let i = 0; i < 60; i++) s.frame(layout, 2 + i * 0.2, i * 50, false);
+    s.reset();
+    expect(s.frame(layout, null, 99999, false).particles).toHaveLength(0);
   });
 });

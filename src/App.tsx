@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ContributionData } from '../shared/types';
 import { ContributionsError, loadContributions } from './api';
-import { unlockAudio } from './music/player';
+import { unlockAudio } from './music/audio';
 import { parseShareLocation, sharePath } from './url';
 import { ErrorView } from './views/ErrorView';
 import { Landing } from './views/Landing';
 import { Loading } from './views/Loading';
-import { PlayerView } from './views/PlayerView';
+
+/** The player (graph, music code, share panel) is its own chunk, fetched alongside the data. */
+const loadPlayerView = () => import('./views/PlayerView');
+type PlayerViewComponent = Awaited<ReturnType<typeof loadPlayerView>>['PlayerView'];
 
 type View =
   | { kind: 'landing' }
   | { kind: 'loading'; user: string; year: number }
-  | { kind: 'player'; data: ContributionData; autoplay: boolean }
+  | { kind: 'player'; data: ContributionData; autoplay: boolean; Player: PlayerViewComponent }
   | { kind: 'error'; user: string; year: number; error: ContributionsError };
 
 const fromUrl = () => parseShareLocation(location);
@@ -36,8 +39,8 @@ export function App() {
     const ctl = (run.current = new AbortController());
     setView({ kind: 'loading', user, year });
 
-    loadContributions(user, year, ctl.signal)
-      .then(async (data) => {
+    Promise.all([loadContributions(user, year, ctl.signal), loadPlayerView()])
+      .then(async ([data, { PlayerView: Player }]) => {
         const ok = await unlocked;
         if (ctl.signal.aborted) return;
         const path = sharePath(data.user, data.year);
@@ -45,7 +48,7 @@ export function App() {
           // A tap adds a history entry so Back returns to the landing page; a link already is the entry.
           (tap ? history.pushState : history.replaceState).call(history, null, '', path);
         }
-        setView({ kind: 'player', data, autoplay: ok });
+        setView({ kind: 'player', data, autoplay: ok, Player });
       })
       .catch((err) => {
         if (ctl.signal.aborted) return;
@@ -87,7 +90,7 @@ export function App() {
         <ErrorView error={view.error} user={view.user} onRetry={() => go(view.user, view.year, true)} onBack={back} />
       )}
       {view.kind === 'player' && (
-        <PlayerView key={`${view.data.user}:${view.data.year}`} data={view.data} autoplay={view.autoplay} onBack={back} />
+        <view.Player key={`${view.data.user}:${view.data.year}`} data={view.data} autoplay={view.autoplay} onBack={back} />
       )}
     </>
   );

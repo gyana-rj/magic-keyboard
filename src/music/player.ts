@@ -1,4 +1,5 @@
 import { songSeconds } from './mapping';
+import { loadToneLib } from './audio';
 import { buildRig, type Rig, type ToneLib } from './instruments';
 import type { Song } from './types';
 
@@ -25,32 +26,6 @@ export interface Player {
   stop(): void;
   dispose(): void;
   readonly playing: boolean;
-}
-
-let tone: Promise<ToneLib> | null = null;
-/** Tone.js is a separate chunk, loaded once, on demand. */
-const loadTone = () => (tone ??= import('tone'));
-let toneReady: ToneLib | null = null;
-
-/** Warm the Tone.js chunk (call when idle) so the first tap doesn't wait on the network. */
-export function preloadAudio(): void {
-  void loadTone().then((t) => (toneReady = t));
-}
-
-/**
- * Resume the browser's audio context. Call it directly inside a tap/click handler: when Tone is
- * already preloaded this runs synchronously within the gesture, which iOS Safari requires.
- * Resolves true if audio is allowed to play.
- */
-export async function unlockAudio(): Promise<boolean> {
-  try {
-    const Tone = toneReady ?? (await loadTone());
-    toneReady = Tone;
-    await Tone.start();
-    return Tone.getContext().state === 'running';
-  } catch {
-    return false;
-  }
 }
 
 export function beatInfo(song: Song, beat: number): Pick<BeatEvent, 'phase' | 'week'> {
@@ -93,7 +68,7 @@ export function createPlayer(song: Song, handlers: PlayerHandlers = {}): Player 
     },
     async play() {
       const mine = ++token;
-      const Tone = await loadTone(); // lazy: keeps Tone.js out of the startup bundle
+      const Tone = await loadToneLib(); // lazy: keeps Tone.js out of the startup bundle
       await Tone.start();
       if (mine !== token) return;
       teardown(Tone);
@@ -123,7 +98,7 @@ export function createPlayer(song: Song, handlers: PlayerHandlers = {}): Player 
     stop() {
       token++;
       if (!playing) return;
-      void loadTone().then((Tone) => teardown(Tone));
+      void loadToneLib().then((Tone) => teardown(Tone));
     },
     dispose() {
       this.stop();
@@ -133,7 +108,7 @@ export function createPlayer(song: Song, handlers: PlayerHandlers = {}): Player 
 
 /** Renders the song to an AudioBuffer without playing it (tests, future audio download). */
 export async function renderSong(song: Song): Promise<AudioBuffer> {
-  const Tone = await loadTone();
+  const Tone = await loadToneLib();
   const buffer = await Tone.Offline(async () => {
     const rig = await buildRig(Tone, song.genre);
     const transport = Tone.getTransport();

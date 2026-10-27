@@ -1,5 +1,5 @@
 import { useEffect } from 'preact/hooks';
-import { preloadAudio } from './music/player';
+import { preloadAudio } from './music/audio';
 
 /**
  * Fetches the audio engine on the first touch or keypress. That is a user gesture, so the browser

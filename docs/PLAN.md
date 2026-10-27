@@ -131,6 +131,41 @@ New Year's because week 0 also holds the folded-in last days of December), genre
 - **Buttons:** Copy link, Post on X, LinkedIn, WhatsApp (plain web-intent links, no SDKs or trackers), and the OS share
   sheet where `navigator.share` exists (attaches the image where allowed).
 
+**Video export** (`src/video/`, optional, lazy): vertical 1080×1920 at 30 fps.
+- *Research (2026):* `MediaRecorder` on `canvas.captureStream()` plus a `MediaStreamAudioDestinationNode` tapped at Tone's
+  output is the most widely supported way to record canvas + audio. MP4 (H.264 + AAC) works on Safari 14.1+ and on
+  Chrome 126+ only where the OS has an H.264 encoder; Firefox never records MP4. WebM (VP9/VP8 + Opus) works on Chrome,
+  Edge, Firefox and Safari 18.4+. WebCodecs + a muxer would be deterministic and faster than real time, but needs muxer
+  libraries, and `AudioEncoder` is missing before Safari 26 and AAC encoding is not universal, so it is less reliable.
+- *Decision:* `MediaRecorder`, container negotiated at runtime (`pickVideoFormat`). MP4 is offered only with explicit
+  H.264 + AAC codec strings: testing found a Chromium build that answers yes to a bare `video/mp4` and then writes VP9 + Opus
+  into it, which Instagram and X reject (tested so it can't regress). Otherwise WebM, with a clear note that Instagram and X
+  want MP4 and how to convert; WebM is patched with `fix-webm-duration` so it has a duration and can seek. No `MediaRecorder`
+  → a message pointing at the image and WAV downloads.
+- *How:* the same `GridScene` the page uses draws the animated graph over a static story card, so the video matches the
+  page. It plays the song once in real time (about 30 s), so the tab must stay visible (hiding it cancels, because frames
+  would freeze). The on-page player is stopped and disabled while recording. Reduced-motion users get no animated preview.
+- *Checked:* a real recording in headless Chromium → 1080×1920 VP9 + Opus WebM, 33 s, audible (peak -3.7 dB), frames show the
+  sweep, lit cells and sparks.
+
+**Abuse protection** (`server/ratelimit.ts`, `server/cache.ts`, `server/handler.ts`, `server/runtime.ts`), outermost first:
+a Vercel firewall rate-limit rule per IP (documented CLI command; the hard limit, applied before a function runs) → CDN
+caching of everything (6 h for results, 5 min for not-found and empty years, errors never) → per-instance fixed-window limiter
+(30/min/client, bounded memory, client from `x-vercel-forwarded-for`) and an LRU cache keyed by lower-cased user+year with
+in-flight de-duplication (so case or query-string tricks can't force new GitHub calls) → strict validation (GitHub's username
+rules, year range, and `/api/contributions` rejects unknown parameters). `/u/` and `/api/og` share the same limiter and cache.
+No IP is logged or stored by the app.
+
+**Performance:** Tone.js, the player, the share panel (cards, WAV) and the video code are separate chunks loaded on demand; the
+unlock helpers are split from the player so the landing page doesn't download it. The share card is only drawn when the panel
+nears the viewport. Measured on the production build: landing = `style.css` + `main.js` (10 kB gzipped), 37 KiB total; Lighthouse
+(mobile, throttled) 100/100/100/100, FCP 0.9 s, LCP 1.2 s, TBT 0 ms, CLS 0; `/about` 100s too. Player: 60 fps during playback, worst
+frame 17 ms, CLS 0.003, player on screen ~290 ms after submit; the video chunks never load unless asked.
+
+**About and icons:** `about.html` is a static second entry (no JavaScript; `cleanUrls` serves `/about`). The favicon and app
+icons (SVG, ICO, 192/512, maskable, Apple touch) come from one original design, the seven weekday bars
+(`scripts/gen-icons.mjs`), with a web manifest.
+
 ## Phases
 
 0. **Foundation** (this session): docs, scaffold, `api/contributions`, fixtures, tests, CI-ready build.

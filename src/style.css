@@ -104,8 +104,31 @@ select { appearance: none; -webkit-appearance: none; padding-right: 40px; backgr
   .play { width: auto; min-width: 220px; display: flex; margin-left: auto; margin-right: auto; }
 }
 
+/* Links, About */
+a { color: var(--accent); text-underline-offset: 3px; }
+.fine a { color: #a7a3c0; }
+.foot { margin: 18px 2px 0; }
+.about { padding-top: clamp(24px, 6vh, 64px); max-width: 720px; }
+.about .brand a { color: var(--muted); text-decoration: none; font-weight: 700; }
+.about h1 { font-size: clamp(34px, 7vw, 56px); letter-spacing: -0.03em; margin: 0 0 12px; }
+.about h2 { font-size: 22px; margin: 34px 0 8px; letter-spacing: -0.01em; }
+.about .lede { font-size: 19px; color: var(--muted); }
+.about li { margin: 8px 0; }
+.about ol, .about ul { padding-left: 22px; }
+
+/* Video */
+.video { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.video h3 { margin: 0 0 6px; font-size: 18px; }
+.beta { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; vertical-align: middle; margin-left: 6px; }
+.video-stage { margin: 10px 0; }
+.video-stage canvas, .video-stage video { display: block; width: 100%; max-width: 270px; height: auto; border-radius: 14px; border: 1px solid var(--line); background: #090913; }
+.bar-track { height: 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); overflow: hidden; max-width: 270px; margin: 8px 0; }
+.bar-fill { height: 100%; background: linear-gradient(100deg, var(--accent), var(--accent2)); transition: width 0.3s linear; }
+.hint.warn { color: #ffcf8a; }
+.play:disabled { opacity: 0.5; cursor: default; }
+
 /* Share */
-.share { margin-top: 36px; }
+.share, .share-placeholder { margin-top: 36px; min-height: 520px; } /* reserve space so nothing jumps when it loads */
 .share h2 { font-size: 22px; letter-spacing: -0.01em; margin: 0 0 14px; }
 .card-preview { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
 .card-preview img { display: block; width: 100%; height: auto; }

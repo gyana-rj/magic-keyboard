@@ -66,7 +66,15 @@
 
 ## Phase 4: Polish and launch
 - [x] Error, empty ("quiet year") and loading states (done in Phase 2b)
-- [ ] Accessibility pass
-- [ ] Open Graph preview image
-- [ ] README with demo; branding check
-- [ ] Production deploy; monitor rate limits
+- [x] Open Graph preview image (done in Phase 3b)
+- [x] **Video export** (optional, lazy): MediaRecorder with runtime container negotiation; MP4 only with real H.264+AAC, else WebM + clear note; unsupported-browser message; verified with a real recording (ffprobe + frames)
+- [x] **Performance:** Tone.js, player, share panel, video all lazy; landing is 10 kB gzipped JS; Lighthouse 100/100/100/100 (mobile + desktop + /about); player 60 fps, CLS 0.003
+- [x] **Abuse protection:** strict params, per-instance limiter, LRU cache + request coalescing, CDN caching of everything, firewall rule documented (tested)
+- [x] **README:** how it works, the music mapping, self-hosting, abuse layers, privacy, dev guide; screenshot placeholders in `docs/screenshots/`
+- [x] **/about page** (static) and **favicon + app icons** (original design, manifest)
+- [x] Branding check: no GitHub logo or "GitHub Wrapped" anywhere (tests cover card text; the OG image says "for GitHub users")
+- [ ] Take real screenshots into `docs/screenshots/` (placeholders for now)
+- [ ] Accessibility pass with a screen reader (Lighthouse a11y is 100; not the same as a manual pass)
+- [ ] **Production deploy**: set `GITHUB_TOKEN` and `PUBLIC_URL`, add the firewall rule, check `/u/<name>/<year>` tags in a card validator (rewrite and `includeFiles` can't be exercised locally), monitor rate limits
+- [ ] Test the video export in Safari (MP4 path) and Firefox; headless Chromium can only exercise the WebM path
+- [ ] Remove `dev-music.html` + `src/dev/` once sound tuning is done

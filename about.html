@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About · Commit Symphony</title>
+    <meta name="description" content="What Commit Symphony is, how a contribution graph becomes music, and what it does with your data (almost nothing)." />
+    <meta name="theme-color" content="#090913" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="backdrop" aria-hidden="true"></div>
+    <main class="about">
+      <p class="brand"><a href="/">← Commit Symphony</a></p>
+      <h1>About</h1>
+      <p class="lede">
+        Commit Symphony turns a year of contributions into a 30-second song and lights the graph up as it plays. It is free,
+        open source and made for GitHub users, and it is not affiliated with or endorsed by GitHub.
+      </p>
+
+      <h2>How it works</h2>
+      <ol>
+        <li>You type a username and a year. We read that person's public contribution graph.</li>
+        <li>
+          The graph becomes music: 52 weeks are 52 beats, the 7 weekdays are 7 notes of a scale, and how busy a day was
+          sets how loud and layered its note is. Quiet weeks are never silent; a soft pad keeps playing.
+        </li>
+        <li>
+          Your most-used language picks the style (lo-fi, synthwave, chiptune, house or ambient). Your username and year
+          seed the key, mode, tempo and chord progression, so the same person always gets the same song.
+        </li>
+        <li>You can share a link, a picture card, the song as a WAV file, or a short vertical video.</li>
+      </ol>
+
+      <h2>Privacy</h2>
+      <ul>
+        <li>Only <strong>public</strong> contribution data is read, through GitHub's API, and only for the name you type.</li>
+        <li>No accounts, no sign-in, no cookies, no analytics, no ads. Your sign-in to GitHub is never involved.</li>
+        <li>
+          Nothing about you is stored in a database. Results are cached for a few hours so the service stays fast and
+          within GitHub's rate limits. Requests are counted per visitor for a minute to stop abuse, in memory only.
+        </li>
+        <li>Pictures, songs and videos are made in your browser and never uploaded.</li>
+      </ul>
+
+      <h2>Made with</h2>
+      <p>
+        Preact, Tone.js for the audio, and a single serverless function for data. The source is MIT licensed:
+        <a href="https://github.com/gyana-rj/magic-keyboard">github.com/gyana-rj/magic-keyboard</a>. The
+        <a href="https://github.com/rsms/inter">Inter</a> typeface (SIL Open Font License) is used in link-preview images.
+      </p>
+
+      <p class="fine"><a href="/">Back to the app</a></p>
+    </main>
+  </body>
+</html>

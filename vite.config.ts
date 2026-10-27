@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import preact from '@preact/preset-vite';
@@ -39,7 +40,23 @@ function devApi(): Plugin {
   };
 }
 
+/** /about is a second, static page; in dev and preview there is no `cleanUrls`, so map it by hand. */
+function aboutRoute(): Plugin {
+  const rewrite = (req: { url?: string }, _res: unknown, next: () => void) => {
+    if (req.url && /^\/about\/?(\?.*)?$/.test(req.url)) req.url = '/about.html';
+    next();
+  };
+  return {
+    name: 'about-route',
+    configureServer: (server) => void server.middlewares.use(rewrite),
+    configurePreviewServer: (server) => void server.middlewares.use(rewrite),
+  };
+}
+
 export default defineConfig({
-  plugins: [preact(), devApi()],
+  plugins: [preact(), devApi(), aboutRoute()],
+  build: {
+    rollupOptions: { input: { main: resolve(import.meta.dirname, 'index.html'), about: resolve(import.meta.dirname, 'about.html') } },
+  },
   test: { include: ['tests/**/*.test.ts'] },
 });

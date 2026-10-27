@@ -83,7 +83,9 @@ export function Landing({ initialUser = '', initialYear, onPlay }: Props) {
         {problem}
       </p>
 
-      <p class="fine">Reads public contributions only. Nothing is stored. Not affiliated with GitHub.</p>
+      <p class="fine">
+        Reads public contributions only. Nothing is stored. Not affiliated with GitHub. <a href="/about">About &amp; privacy</a>
+      </p>
     </main>
   );
 }
