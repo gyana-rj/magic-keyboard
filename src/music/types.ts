@@ -11,6 +11,8 @@ export interface NoteEvent {
   voice: Voice;
   midi?: number;
   vel: number;
+  /** The contribution-graph cell [week 0-51, weekday 0-6] a lead note stands for (drives the visual). */
+  cell?: [week: number, day: number];
 }
 
 /** Plain-JSON description of a song. Contains no audio and no functions. */

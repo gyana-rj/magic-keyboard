@@ -23,8 +23,14 @@
 - [ ] Remove `dev-music.html` + `src/dev/` once the real UI plays songs
 
 ## Phase 2: Visual
-- [ ] Canvas heatmap with playhead synced to Transport
-- [ ] Note pulses by level; responsive; `prefers-reduced-motion`
+- [x] Lead notes carry their `cell`; pulses derived from the song (one per active cell, tested)
+- [x] Canvas heatmap with playhead synced to the player's beat events (`BeatClock` + rAF)
+- [x] Note pulses scaled by level; per-genre palettes
+- [x] Responsive layout (320-2000 px tested) and DPR-aware canvas
+- [x] `prefers-reduced-motion`: stepped playhead, no pulses
+- [x] Checked in headless Chromium: 60 fps while playing, no console errors, screenshots at desktop, phone and reduced motion
+- [ ] Judge the look and the audio/visual sync by eye and ear (needs a human)
+- [ ] Wire `<Visual>` into the real app UI (currently only on `/dev-music.html`)
 
 ## Phase 3: Share
 - [ ] PNG share card

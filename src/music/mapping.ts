@@ -50,9 +50,10 @@ export function composeSong(data: ContributionData): Song {
   const tiers = weekTiers(data.weeks);
 
   const events: NoteEvent[] = [];
-  const add = (voice: Voice, beat: number, dur: number, vel: number, midi?: number) => {
+  const add = (voice: Voice, beat: number, dur: number, vel: number, midi?: number, cell?: [number, number]) => {
     const e: NoteEvent = { beat: r4(beat), dur: r4(dur), voice, vel: r4(Math.min(1, vel)) };
     if (midi !== undefined) e.midi = midi;
+    if (cell) e.cell = cell;
     events.push(e);
   };
   const pitch = (degree: number, octave: number) => noteAt(rootPc, scale, degree, octave);
@@ -93,7 +94,7 @@ export function composeSong(data: ContributionData): Song {
       const level = days[d] ?? 0;
       if (level === 0) return;
       const t = beat + i * 0.125;
-      add('lead', t, 0.35, LEAD_VEL[level]!, pitch(d, octave));
+      add('lead', t, 0.35, LEAD_VEL[level]!, pitch(d, octave), [w, d]);
       if (level >= 3) add('lead', t, 0.35, LEAD_VEL[level]! * 0.7, pitch(d, octave - 1));
     });
 

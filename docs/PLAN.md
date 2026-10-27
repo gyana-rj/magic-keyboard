@@ -81,8 +81,18 @@ Implemented in `src/music/`: `mapping.ts` (`composeSong(data) → Song`, plain J
 
 ## Visual and share
 
-- Canvas heatmap of the 52×7 grid; a playhead sweeps one column per beat and cells pulse as their notes fire.
-  Driven by the same event list as the audio (scheduled on `Tone.Transport`, drawn from `Tone.getDraw()`).
+Implemented in `src/visual/`, rendered by `<Visual data song clock playing />` on a single canvas.
+
+- **Same events as the audio.** Each lead note in the song carries its graph cell (`cell: [week, day]`), so
+  `buildPulses(song)` yields exactly one pulse per active cell, firing on that cell's note. No second timing source.
+- **Sync:** the player's per-beat callback (via `Tone.getDraw()`, which compensates for audio latency) re-anchors a
+  `BeatClock`; `requestAnimationFrame` reads a smooth fractional beat from it. Re-anchoring every beat stops drift.
+- **Look:** the 52×7 heatmap fills in as the song reaches each week (unplayed columns are dimmed); a thin playhead glides
+  across; a cell swells and glows when its note fires, brighter for higher levels. Palette per genre (`palettes.ts`).
+- **Responsive:** `computeLayout(width)` sizes square cells to the container (tested 320-2000 px); the canvas is
+  DPR-aware and redraws on resize.
+- **Reduced motion** (`prefers-reduced-motion`): playhead steps once per beat, no pulses, glow or scaling.
+- The animation loop runs only while playing; idle it draws one static frame.
 - **Share card:** client-side canvas → PNG (grid, total, top languages, year, "for GitHub users" line).
 - **Share link:** `/?u=&y=`; optional later: `api/og` for an Open Graph preview image.
 

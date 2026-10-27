@@ -19,6 +19,8 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
 - The API contract is `shared/types.ts` (`weeks[52][7]` levels 0-4). Change it in one place, update PLAN.md.
 - Keep logic in `server/` and `src/` pure and unit-tested; `api/contributions.ts` stays a thin wrapper.
 - Relative imports under `api/` and `server/` use `.js` extensions (Vercel runs them as ESM).
+- Visual (`src/visual/`): pure modules (layout, clock, pulses) are unit-tested; `draw.ts`/`Visual.tsx` need a browser.
+  Pulses come from `song.events[].cell`, never from a separate timer.
 - Keep the bundle small. Load Tone.js with dynamic `import()` on Play, not at startup.
 - Branding: say "for GitHub users". Never use GitHub's logo or the words "GitHub Wrapped".
 - Music: `src/music/mapping.ts` stays pure (no Tone import); all pitches go through `noteAt`; seed randomness from user+year.

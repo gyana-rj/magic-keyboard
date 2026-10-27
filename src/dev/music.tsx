@@ -7,6 +7,8 @@ import { GENRES } from '../music/genres';
 import { composeSong, maxPolyphony, songSeconds } from '../music/mapping';
 import { createPlayer, type Player } from '../music/player';
 import { keyName } from '../music/scales';
+import { BeatClock } from '../visual/clock';
+import { Visual } from '../visual/Visual';
 import '../style.css';
 
 const fixtures = Object.fromEntries(
@@ -24,11 +26,14 @@ function Dev() {
   const [beat, setBeat] = useState<{ beat: number; week: number | null } | null>(null);
   const player = useRef<Player | null>(null);
 
-  const song = useMemo(() => composeSong({ ...fixtures[name]!, user, year }), [name, user, year]);
+  const data = useMemo(() => ({ ...fixtures[name]!, user, year }), [name, user, year]);
+  const song = useMemo(() => composeSong(data), [data]);
+  const clock = useMemo(() => new BeatClock(song.bpm), [song]);
 
   function stop() {
     player.current?.dispose();
     player.current = null;
+    clock.reset();
     setPlaying(false);
     setBeat(null);
   }
@@ -36,8 +41,12 @@ function Dev() {
   async function play() {
     stop();
     const p = createPlayer(song, {
-      onBeat: (e) => setBeat({ beat: e.beat, week: e.week }),
+      onBeat: (e) => {
+        clock.sync(e.beat, performance.now());
+        setBeat({ beat: e.beat, week: e.week });
+      },
       onEnd: () => {
+        clock.reset();
         setPlaying(false);
         setBeat(null);
       },
@@ -72,15 +81,7 @@ function Dev() {
         {song.events.length} events · max {maxPolyphony(song)} voices · seed {song.seed}
       </p>
       <p>{beat ? `beat ${beat.beat}${beat.week !== null ? ` · week ${beat.week + 1}` : ''}` : 'stopped'}</p>
-      <div class="grid" aria-hidden="true">
-        {fixtures[name]!.weeks.map((week, w) => (
-          <div class="col" style={{ outline: beat?.week === w ? '1px solid #fff' : 'none' }}>
-            {week.map((level) => (
-              <span class={`cell l${level}`} />
-            ))}
-          </div>
-        ))}
-      </div>
+      <Visual data={data} song={song} clock={clock} playing={playing} />
     </main>
   );
 }
