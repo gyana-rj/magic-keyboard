@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FIXTURES } from '../server/fixtures';
 import { composeSong } from '../src/music/mapping';
-import { CARD_H, CARD_W, cardLayout } from '../src/share/card';
-import { buildCardModel, cardFilename, shareText } from '../src/share/model';
-import { parseShareParams, sharePath, shareUrl } from '../src/url';
+import { CARD_FORMATS, cardLayout, gridBox } from '../src/share/card';
+import { buildCardModel, cardFilename, shareText, wavFilename } from '../src/share/model';
+import { parseShareLocation, parseSharePath, parseShareParams, sharePath, shareUrl } from '../src/url';
 
 const now = new Date('2026-06-01T00:00:00Z');
 
@@ -23,12 +23,30 @@ describe('share link', () => {
   );
   it('round-trips through sharePath', () => {
     const path = sharePath('octo-cat', 2023);
-    expect(path).toBe('/?u=octo-cat&y=2023');
-    expect(parseShareParams(path.slice(1), now)).toEqual({ user: 'octo-cat', year: 2023 });
-    expect(shareUrl('https://x.example', 'a', 2020)).toBe('https://x.example/?u=a&y=2020');
+    expect(path).toBe('/u/octo-cat/2023');
+    expect(parseSharePath(path, now)).toEqual({ user: 'octo-cat', year: 2023 });
+    expect(shareUrl('https://x.example', 'a', 2020)).toBe('https://x.example/u/a/2020');
   });
   it('ignores unrelated params', () => {
     expect(parseShareParams('?utm_source=x&u=a&y=2020', now)).toEqual({ user: 'a', year: 2020 });
+  });
+});
+
+describe('share path', () => {
+  it('parses /u/:user/:year', () => {
+    expect(parseSharePath('/u/octocat/2024', now)).toEqual({ user: 'octocat', year: 2024 });
+    expect(parseSharePath('/u/octocat/2024/', now)).toEqual({ user: 'octocat', year: 2024 });
+    expect(parseSharePath('/u/Octo-Cat/2008', now)).toEqual({ user: 'Octo-Cat', year: 2008 });
+  });
+  it.each(['/', '/u', '/u/octocat', '/u/octocat/24', '/u/octocat/1999', '/u/octocat/2027', '/u/-bad/2024', '/u/a--b/2024', '/u/a%2Fb/2024', '/u/%E0%A4%A/2024', '/u/octocat/2024/extra', '/x/octocat/2024'])(
+    'rejects %s',
+    (p) => expect(parseSharePath(p, now)).toBeNull(),
+  );
+  it('parseShareLocation prefers the path and still accepts the older query form', () => {
+    expect(parseShareLocation({ pathname: '/u/a/2020', search: '' }, now)).toEqual({ user: 'a', year: 2020 });
+    expect(parseShareLocation({ pathname: '/', search: '?u=b&y=2021' }, now)).toEqual({ user: 'b', year: 2021 });
+    expect(parseShareLocation({ pathname: '/about', search: '?u=b&y=2021' }, now)).toBeNull();
+    expect(parseShareLocation({ pathname: '/', search: '' }, now)).toBeNull();
   });
 });
 
@@ -58,23 +76,38 @@ describe('card model', () => {
     }
   });
   it('makes a safe filename', () => {
-    expect(cardFilename('OctoCat', 2025)).toBe('commit-symphony-octocat-2025.png');
+    expect(cardFilename('OctoCat', 2025)).toBe('commit-symphony-octocat-2025-landscape.png');
+    expect(cardFilename('OctoCat', 2025, 'story')).toBe('commit-symphony-octocat-2025-story.png');
+    expect(wavFilename('OctoCat', 2025)).toBe('commit-symphony-octocat-2025.wav');
   });
 });
 
 describe('cardLayout', () => {
-  const L = cardLayout();
-  it('keeps every block on the card and in reading order', () => {
-    const ys = [L.brand.y, L.title.y, L.headline.y, L.grid.y, L.stats.y, L.footer.y];
-    expect(ys).toEqual([...ys].sort((a, b) => a - b));
-    expect(L.grid.x + L.grid.width).toBeLessThanOrEqual(CARD_W);
-    expect(L.footer.y).toBeLessThanOrEqual(CARD_H);
-    expect(L.stats.colWidth * 3 + L.grid.x).toBeLessThanOrEqual(CARD_W);
-  });
-  it('leaves room for the heatmap between headline and stats', () => {
-    // 52 columns across the grid width -> square cells; seven rows must fit above the stats
-    const cell = Math.floor((L.grid.width - 2 * 2 * 25) / 52); // matches computeLayout: gap 2, no padding
-    const gridH = 7 * cell + 6 * 2 + 22 /* headroom */;
-    expect(L.grid.y + gridH).toBeLessThan(L.stats.y - 18);
+  for (const format of ['landscape', 'square', 'story'] as const) {
+    const L = cardLayout(format);
+    const { w, h } = CARD_FORMATS[format];
+    it(`${format}: has the standard size and keeps every block on the card in reading order`, () => {
+      expect([L.w, L.h]).toEqual([w, h]);
+      const ys = [L.brand.y, L.title.y, L.headline.y, L.grid.y, L.stats.y, L.footer.y];
+      expect(ys).toEqual([...ys].sort((a, b) => a - b));
+      expect(L.grid.x + L.grid.width).toBeLessThanOrEqual(w);
+      expect(L.stats.x + L.stats.colWidth * L.stats.cols).toBeLessThanOrEqual(w + 1);
+      expect(L.footer.y).toBeLessThanOrEqual(h);
+    });
+    it(`${format}: the heatmap fits between the headline and the stats`, () => {
+      const box = gridBox(format);
+      expect(box.y).toBeGreaterThan(L.headline.y);
+      expect(box.y + box.layout.height).toBeLessThan(L.stats.y - L.stats.labelSize);
+      expect(box.layout.cell).toBeGreaterThanOrEqual(format === 'landscape' ? 16 : 30);
+    });
+    it(`${format}: the last stat ends above the footer`, () => {
+      const rows = Math.ceil(3 / L.stats.cols);
+      const lastBottom = L.stats.y + (rows - 1) * L.stats.rowHeight + L.stats.valueSize * 1.2;
+      expect(lastBottom).toBeLessThan(L.footer.y - 10);
+    });
+  }
+  it('the standard sizes', () => {
+    expect(CARD_FORMATS.square).toMatchObject({ w: 1080, h: 1080 });
+    expect(CARD_FORMATS.story).toMatchObject({ w: 1080, h: 1920 });
   });
 });

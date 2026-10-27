@@ -19,9 +19,12 @@ export interface Layout {
   bandGap: number;
 }
 
-/** Fits the 52x7 grid into `width` CSS pixels; the height follows from the cell size. */
-export function computeLayout(width: number, pad = 8): Layout {
-  const bands = width < NARROW ? 2 : 1;
+/**
+ * Fits the 52x7 grid into `width` CSS pixels; the height follows from the cell size. `bands` (1, 2 or 4)
+ * forces a wrapping; by default phones get 2 and everything wider 1.
+ */
+export function computeLayout(width: number, pad = 8, forcedBands?: 1 | 2 | 4): Layout {
+  const bands = forcedBands ?? (width < NARROW ? 2 : 1);
   const perBand = COLS / bands;
   const gap = width < 480 ? 1 : 2;
   const cell = Math.max(2, Math.floor((width - 2 * pad - gap * (perBand - 1)) / perBand));

@@ -80,3 +80,8 @@ export function genreForLanguages(topLanguages: string[]): GenreId {
   }
   return FALLBACK_GENRE;
 }
+
+/** The genre for a year: the calmest preset for a silent year, otherwise by top language. */
+export function genreForData(topLanguages: string[], total: number): GenreId {
+  return total === 0 ? 'ambient' : genreForLanguages(topLanguages);
+}

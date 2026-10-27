@@ -52,6 +52,18 @@
 - [ ] Try the native share sheet on a real phone (not available in headless Chromium)
 - [ ] Open Graph image so pasted links show a preview (Phase 4, `api/og`)
 
+## Phase 3b: Shareable results
+- [x] `/u/{username}/{year}` loads that result; Play is one tap (browsers block autoplay); legacy `/?u=&y=` still works
+- [x] Link previews: `api/share` renders Open Graph + Twitter card tags server-side into the real app shell (tested)
+- [x] Dynamic OG image `api/og` (graph, name, genre, total); generic card on any failure (tested, real PNG render in tests)
+- [x] Share cards as PNG: landscape 1200×630, square 1080×1080, story 1080×1920
+- [x] Song as WAV, rendered offline from the song description (checked with ffprobe: 30.5 s, 16-bit stereo, peak -4 dB)
+- [x] Buttons: Copy link, X, LinkedIn, WhatsApp, native share sheet (where supported)
+- [x] Tests: routes, meta, escaping, fallbacks, OG svg/png, vercel.json rewrite, WAV header/samples, share links, card layouts
+- [ ] **On first deploy, verify** `/u/<name>/<year>` shows the right tags in a crawler debugger (the rewrite and `includeFiles` can't be exercised locally; the redirect fallback keeps it working if the template is missing)
+- [ ] Set `PUBLIC_URL` on the deployment if it has a custom domain
+- [ ] Try the native share sheet on a real phone
+
 ## Phase 4: Polish and launch
 - [x] Error, empty ("quiet year") and loading states (done in Phase 2b)
 - [ ] Accessibility pass

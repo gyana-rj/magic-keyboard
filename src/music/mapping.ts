@@ -1,5 +1,5 @@
 import { DAYS, WEEKS, type ContributionData } from '../../shared/types';
-import { GENRES, genreForLanguages } from './genres';
+import { GENRES, genreForData } from './genres';
 import { mulberry32, seedFor, subRng } from './prng';
 import { MODES, noteAt } from './scales';
 import type { NoteEvent, Song, Tier, Voice } from './types';
@@ -41,7 +41,7 @@ export function composeSong(data: ContributionData): Song {
   const rng = mulberry32(seed);
 
   // A year with no contributions gets the calmest preset regardless of language.
-  const genre = GENRES[data.total === 0 ? 'ambient' : genreForLanguages(data.topLanguages)];
+  const genre = GENRES[genreForData(data.topLanguages, data.total)];
   const bpm = genre.bpm[0] + Math.floor(rng() * (genre.bpm[1] - genre.bpm[0] + 1));
   const mode = genre.modes[Math.floor(rng() * genre.modes.length)]!;
   const rootPc = Math.floor(rng() * 12);

@@ -104,20 +104,32 @@ New Year's because week 0 also holds the folded-in last days of December), genre
 - **Responsive:** `computeLayout(width)`: one 52-column band, or on phones (< 640 px) two stacked 26-week bands so cells
   stay readable. DPR-aware; redraws on resize; the loop runs only while playing.
 - **Reduced motion:** columns light a week at a time, stepped column highlight, no glow, pulses or sparks (also no CSS animation).
-**Share** (`src/share/`, `src/url.ts`, `src/views/SharePanel.tsx`):
-- **Link:** `/?u=<login>&y=<yyyy>`. `parseShareParams` validates with the same rules as the API (bad username or year
-  → landing page; missing year → current year). A tap on "Play my year" pushes the URL (Back returns to the landing
-  page); opening a link replaces it. The app is stateless, so the link just re-fetches (CDN-cached) and recomposes the
-  same deterministic song. The canonical login from the API is what goes into the URL.
+**Share** (`src/share/`, `src/url.ts`, `src/views/SharePanel.tsx`, `server/share.ts`, `server/og.ts`):
+- **Link:** `/u/<login>/<yyyy>` (the older `/?u=&y=` still works). `parseSharePath` validates with the API's rules.
+  A tap on "Play my year" pushes the path; opening a link replaces it. The app is stateless: the link re-fetches
+  (CDN-cached) and recomposes the same deterministic song.
 - **Link visitors can't autoplay** (no gesture): they land on the player and tap Play. The audio engine is warmed on their
   first touch; if the browser still refuses audio, the caption asks for another tap rather than running silently.
-- **Card:** a 1200×630 PNG drawn on a canvas (`renderCard`): @user + year, headline, the full heatmap (it reuses the live
-  renderer with everything lit), contributions / busiest week / longest streak, key and BPM, genre pill, and the host.
-  Long usernames shrink to fit. Text comes from `buildCardModel`, shared with the stats under the player.
-- **Actions:** Copy link (clipboard API with a textarea fallback), Download image (`commit-symphony-<user>-<year>.png`),
-  and the OS share sheet where `navigator.share` exists (attaches the image where the platform allows). The preview is a
-  real `<img>`, so long-press save works on phones.
-- **Not yet:** an Open Graph image, so a pasted link shows no preview picture until Phase 4 adds `api/og`.
+- **Link previews, server-side.** `vercel.json` rewrites `/u/:user/:year` to `api/share`, which fetches the (cached)
+  result and returns the app's own `index.html` with the title, description, canonical URL and Open Graph + Twitter card
+  tags filled in (`server/meta.ts`, every value escaped), so crawlers that never run JavaScript see the real result.
+  It reads `dist/index.html` (bundled with `includeFiles`), else fetches it from the deployment, else serves a tiny
+  redirect page that still carries the tags. Unknown user → 404 with generic tags (the app explains); a GitHub outage
+  or rate limit → 200, `no-store`, generic tags. `PUBLIC_URL` pins the origin used in absolute URLs.
+- **OG image:** `api/og?user=&year=` → 1200×630 PNG showing the graph, name, year, genre and total. Findings from the
+  current Vercel docs: `@vercel/og` (Satori + Resvg) is the documented route, but its Node build needs a `hb.wasm`
+  file the package doesn't ship and fails to load outside Next's bundler, and the "other frameworks" example is
+  Edge-only with Vercel-specific wasm imports. So `server/og.ts` builds the SVG itself (a pure function, tested) and
+  rasterizes it with `@resvg/resvg-js` (the same renderer) using an embedded Inter subset (SIL OFL, 43 KB,
+  `server/fontData.ts`), so output is identical everywhere and no file tracing is needed. Any failure returns the
+  generic card, never a broken image. `robots.txt` allows `/api/og`.
+- **Cards:** client-side canvas PNGs in three formats: landscape 1200×630, square 1080×1080, story 1080×1920 (phone
+  layout: the year wraps into two bands; stats stack on the story card). Positions live in data (`cardLayout`) so
+  they are tested for bounds and overlap. Text comes from `buildCardModel`, shared with the stats under the player.
+- **WAV:** `renderSong` renders the song description offline (`Tone.Offline`, not a recording of the speakers);
+  `encodeWav` writes 16-bit PCM. About 5 MB, 44.1 kHz stereo, ~16 s to render on a slow machine.
+- **Buttons:** Copy link, Post on X, LinkedIn, WhatsApp (plain web-intent links, no SDKs or trackers), and the OS share
+  sheet where `navigator.share` exists (attaches the image where allowed).
 
 ## Phases
 

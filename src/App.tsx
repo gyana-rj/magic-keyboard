@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ContributionData } from '../shared/types';
 import { ContributionsError, loadContributions } from './api';
 import { unlockAudio } from './music/player';
-import { parseShareParams, sharePath } from './url';
+import { parseShareLocation, sharePath } from './url';
 import { ErrorView } from './views/ErrorView';
 import { Landing } from './views/Landing';
 import { Loading } from './views/Loading';
@@ -14,7 +14,7 @@ type View =
   | { kind: 'player'; data: ContributionData; autoplay: boolean }
   | { kind: 'error'; user: string; year: number; error: ContributionsError };
 
-const fromUrl = () => parseShareParams(location.search);
+const fromUrl = () => parseShareLocation(location);
 
 export function App() {
   const initial = useRef(fromUrl()); // a shared link opens straight into loading, no landing flash
@@ -56,7 +56,7 @@ export function App() {
 
   function back() {
     run.current?.abort();
-    if (location.search) history.pushState(null, '', '/');
+    if (location.pathname !== '/' || location.search) history.pushState(null, '', '/');
     setView({ kind: 'landing' });
   }
 

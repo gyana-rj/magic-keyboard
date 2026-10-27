@@ -38,8 +38,12 @@ export function buildCardModel(data: ContributionData, song: Song): CardModel {
   };
 }
 
-export function cardFilename(user: string, year: number): string {
-  return `commit-symphony-${user.toLowerCase()}-${year}.png`;
+export function cardFilename(user: string, year: number, format: 'landscape' | 'square' | 'story' = 'landscape'): string {
+  return `commit-symphony-${user.toLowerCase()}-${year}-${format}.png`;
+}
+
+export function wavFilename(user: string, year: number): string {
+  return `commit-symphony-${user.toLowerCase()}-${year}.wav`;
 }
 
 /** Text shared alongside the link. */

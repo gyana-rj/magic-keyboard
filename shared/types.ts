@@ -13,6 +13,7 @@ export interface ContributionData {
 export type ApiErrorCode =
   | 'invalid_user'
   | 'invalid_year'
+  | 'invalid_request'
   | 'not_found'
   | 'rate_limited'
   | 'upstream_error'

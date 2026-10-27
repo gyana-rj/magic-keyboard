@@ -1,5 +1,6 @@
 import type { ApiError, ContributionData } from '../shared/types.js';
 import { ApiFailure, failures } from './errors.js';
+import { limitResponse, type Limiter } from './ratelimit.js';
 import { isValidUsername, parseYear } from './validate.js';
 
 /** Where contribution data comes from: GitHub in production, fixtures in dev. */
@@ -25,9 +26,21 @@ function errorResponse(f: ApiFailure) {
   return json(body, f.status, cache, extra);
 }
 
-export async function handle(request: Request, source: Source, now = new Date()): Promise<Response> {
+const ALLOWED_PARAMS = new Set(['user', 'year']);
+
+export interface HandleOptions {
+  limiter?: Limiter;
+}
+
+export async function handle(request: Request, source: Source, now = new Date(), opts: HandleOptions = {}): Promise<Response> {
   try {
+    if (opts.limiter) {
+      const limited = limitResponse(opts.limiter, request);
+      if (limited) return limited;
+    }
     const params = new URL(request.url).searchParams;
+    // Strict on purpose: extra parameters could only be used to dodge the cache.
+    for (const key of params.keys()) if (!ALLOWED_PARAMS.has(key)) throw failures.invalidRequest();
     const user = params.get('user');
     if (!isValidUsername(user)) throw failures.invalidUser();
     const year = parseYear(params.get('year'), now);

@@ -16,6 +16,7 @@ export const failures = {
     new ApiFailure('invalid_user', 400, 'That does not look like a valid GitHub username.'),
   invalidYear: () =>
     new ApiFailure('invalid_year', 400, 'Pick a year between 2008 and the current year.'),
+  invalidRequest: () => new ApiFailure('invalid_request', 400, 'That request has parameters we do not understand.'),
   notFound: (user: string) =>
     new ApiFailure('not_found', 404, `We could not find a GitHub user named "${user}".`),
   rateLimited: (retryAfterSeconds?: number) =>
