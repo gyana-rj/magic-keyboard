@@ -43,9 +43,14 @@
 - [ ] Remove `dev-music.html` + `src/dev/` once sound tuning is done (kept for now so the sound can be tuned)
 
 ## Phase 3: Share
-- [ ] PNG share card
-- [ ] Share link `/?u=&y=` with URL state
-- [ ] Copy link / download buttons
+- [x] PNG share card (1200×630): heatmap, stats, genre, key/BPM; long names shrink to fit
+- [x] Share link `/?u=&y=`: validated parsing, history (Back/Forward), shared links load straight into the player
+- [x] Link visitors tap Play (no autoplay); audio warmed on first touch; refused audio shows a retry caption
+- [x] Copy link, Download image, native Share sheet (where supported); feedback via live region
+- [x] Tests: link parsing and round trip, card text for fixtures and a silent year, layout bounds, no forbidden branding
+- [x] Browser-tested: link load, first-tap play, clipboard, download (PNG inspected), Back/Forward, bad link, missing user via link, 375 px
+- [ ] Try the native share sheet on a real phone (not available in headless Chromium)
+- [ ] Open Graph image so pasted links show a preview (Phase 4, `api/og`)
 
 ## Phase 4: Polish and launch
 - [x] Error, empty ("quiet year") and loading states (done in Phase 2b)

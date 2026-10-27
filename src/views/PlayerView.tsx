@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ContributionData } from '../../shared/types';
 import { GENRES } from '../music/genres';
 import { composeSong } from '../music/mapping';
-import { createPlayer, type Player } from '../music/player';
+import { createPlayer, unlockAudio, type Player } from '../music/player';
+import { useWarmAudio } from '../useWarmAudio';
 import { keyName } from '../music/scales';
 import { busiestWeek, longestStreak, weekRange } from '../stats';
 import { BeatClock } from '../visual/clock';
 import { PALETTES } from '../visual/palettes';
 import { Visual } from '../visual/Visual';
+import { SharePanel } from './SharePanel';
 
 interface Props {
   data: ContributionData;
@@ -24,13 +26,17 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
   const palette = PALETTES[song.genre];
   const genre = GENRES[song.genre];
   const player = useRef<Player | null>(null);
+  const attempt = useRef(0); // lets Stop cancel a Play that is still waiting for the audio unlock
   const [status, setStatus] = useState<Status>('idle');
   const [week, setWeek] = useState<number | null>(null);
+
+  useWarmAudio(); // shared-link arrivals have no earlier gesture; warm up on the first touch
 
   const busiest = useMemo(() => busiestWeek(data.weeks), [data]);
   const streak = useMemo(() => longestStreak(data.weeks, data.year), [data]);
 
   function stop() {
+    attempt.current++;
     player.current?.dispose();
     player.current = null;
     clock.reset();
@@ -39,7 +45,14 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
 
   async function start() {
     stop();
+    const mine = attempt.current;
     setStatus('starting');
+    const unlocked = unlockAudio(); // called straight from the tap, so the audio context resumes inside the gesture
+    if (!(await unlocked)) {
+      if (mine === attempt.current) setStatus('failed'); // refused: the next tap has the engine loaded and will work
+      return;
+    }
+    if (mine !== attempt.current) return;
     const p = createPlayer(song, {
       onBeat: (e) => {
         clock.sync(e.beat, performance.now());
@@ -71,7 +84,11 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
 
   useEffect(() => {
     if (autoplay) void start();
-    return () => player.current?.dispose();
+    document.title = `@${data.user}'s ${data.year} · Commit Symphony`;
+    return () => {
+      player.current?.dispose();
+      document.title = 'Commit Symphony';
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -153,6 +170,8 @@ export function PlayerView({ data, autoplay, onBack }: Props) {
           </small>
         </div>
       </dl>
+
+      <SharePanel data={data} song={song} />
     </main>
   );
 }

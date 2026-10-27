@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { isValidUsername } from '../../server/validate';
-import { preloadAudio } from '../music/player';
+import { useWarmAudio } from '../useWarmAudio';
 import { Mark } from './Mark';
 
 interface Props {
@@ -16,18 +16,7 @@ export function Landing({ initialUser = '', initialYear, onPlay }: Props) {
   const [year, setYear] = useState(initialYear ?? thisYear);
   const [problem, setProblem] = useState<string | null>(null);
 
-  // Fetch the audio engine on the first touch or keypress. That is a user gesture, so the browser
-  // doesn't warn about an audio context starting early, and it is ready before "Play my year" is tapped.
-  useEffect(() => {
-    const warm = () => preloadAudio();
-    const opts = { once: true, capture: true } as const;
-    window.addEventListener('pointerdown', warm, opts);
-    window.addEventListener('keydown', warm, opts);
-    return () => {
-      window.removeEventListener('pointerdown', warm, opts);
-      window.removeEventListener('keydown', warm, opts);
-    };
-  }, []);
+  useWarmAudio();
 
   function submit(e: Event) {
     e.preventDefault();

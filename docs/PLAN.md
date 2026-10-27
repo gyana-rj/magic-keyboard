@@ -104,8 +104,20 @@ New Year's because week 0 also holds the folded-in last days of December), genre
 - **Responsive:** `computeLayout(width)`: one 52-column band, or on phones (< 640 px) two stacked 26-week bands so cells
   stay readable. DPR-aware; redraws on resize; the loop runs only while playing.
 - **Reduced motion:** columns light a week at a time, stepped column highlight, no glow, pulses or sparks (also no CSS animation).
-- **Share card:** client-side canvas → PNG (grid, total, top languages, year, "for GitHub users" line).
-- **Share link:** `/?u=&y=`; optional later: `api/og` for an Open Graph preview image.
+**Share** (`src/share/`, `src/url.ts`, `src/views/SharePanel.tsx`):
+- **Link:** `/?u=<login>&y=<yyyy>`. `parseShareParams` validates with the same rules as the API (bad username or year
+  → landing page; missing year → current year). A tap on "Play my year" pushes the URL (Back returns to the landing
+  page); opening a link replaces it. The app is stateless, so the link just re-fetches (CDN-cached) and recomposes the
+  same deterministic song. The canonical login from the API is what goes into the URL.
+- **Link visitors can't autoplay** (no gesture): they land on the player and tap Play. The audio engine is warmed on their
+  first touch; if the browser still refuses audio, the caption asks for another tap rather than running silently.
+- **Card:** a 1200×630 PNG drawn on a canvas (`renderCard`): @user + year, headline, the full heatmap (it reuses the live
+  renderer with everything lit), contributions / busiest week / longest streak, key and BPM, genre pill, and the host.
+  Long usernames shrink to fit. Text comes from `buildCardModel`, shared with the stats under the player.
+- **Actions:** Copy link (clipboard API with a textarea fallback), Download image (`commit-symphony-<user>-<year>.png`),
+  and the OS share sheet where `navigator.share` exists (attaches the image where the platform allows). The preview is a
+  real `<img>`, so long-press save works on phones.
+- **Not yet:** an Open Graph image, so a pasted link shows no preview picture until Phase 4 adds `api/og`.
 
 ## Phases
 

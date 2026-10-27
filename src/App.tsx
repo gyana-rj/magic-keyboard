@@ -1,7 +1,8 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ContributionData } from '../shared/types';
 import { ContributionsError, loadContributions } from './api';
 import { unlockAudio } from './music/player';
+import { parseShareParams, sharePath } from './url';
 import { ErrorView } from './views/ErrorView';
 import { Landing } from './views/Landing';
 import { Loading } from './views/Loading';
@@ -13,15 +14,24 @@ type View =
   | { kind: 'player'; data: ContributionData; autoplay: boolean }
   | { kind: 'error'; user: string; year: number; error: ContributionsError };
 
+const fromUrl = () => parseShareParams(location.search);
+
 export function App() {
-  const [view, setView] = useState<View>({ kind: 'landing' });
-  const last = useRef({ user: '', year: new Date().getFullYear() });
+  const initial = useRef(fromUrl()); // a shared link opens straight into loading, no landing flash
+  const [view, setView] = useState<View>(
+    initial.current ? { kind: 'loading', ...initial.current } : { kind: 'landing' },
+  );
+  const last = useRef(initial.current ?? { user: '', year: new Date().getFullYear() });
   const run = useRef<AbortController | null>(null);
 
-  /** Runs inside the tap on "Play my year": unlock audio right now, then fetch while it settles. */
-  function go(user: string, year: number) {
+  /**
+   * Fetch a year and show the player. From the "Play my year" tap (`tap: true`) audio is unlocked inside
+   * the gesture and playback starts on arrival. From a shared link there is no gesture, so the player
+   * waits for an explicit Play tap.
+   */
+  function go(user: string, year: number, tap: boolean) {
     last.current = { user, year };
-    const unlocked = unlockAudio(); // must start inside the gesture; not awaited so the fetch isn't delayed
+    const unlocked = tap ? unlockAudio() : Promise.resolve(false); // must start inside the gesture
     run.current?.abort();
     const ctl = (run.current = new AbortController());
     setView({ kind: 'loading', user, year });
@@ -30,7 +40,11 @@ export function App() {
       .then(async (data) => {
         const ok = await unlocked;
         if (ctl.signal.aborted) return;
-        // If the browser refused to unlock audio, show the player and wait for an explicit Play tap.
+        const path = sharePath(data.user, data.year);
+        if (location.pathname + location.search !== path) {
+          // A tap adds a history entry so Back returns to the landing page; a link already is the entry.
+          (tap ? history.pushState : history.replaceState).call(history, null, '', path);
+        }
         setView({ kind: 'player', data, autoplay: ok });
       })
       .catch((err) => {
@@ -42,18 +56,39 @@ export function App() {
 
   function back() {
     run.current?.abort();
+    if (location.search) history.pushState(null, '', '/');
     setView({ kind: 'landing' });
   }
+
+  useEffect(() => {
+    if (initial.current) go(initial.current.user, initial.current.year, false);
+    // Browser Back/Forward between landing and shared-link URLs.
+    const onPop = () => {
+      const p = fromUrl();
+      if (p) go(p.user, p.year, false);
+      else {
+        run.current?.abort();
+        setView({ kind: 'landing' });
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
       <div class="backdrop" aria-hidden="true" />
-      {view.kind === 'landing' && <Landing initialUser={last.current.user} initialYear={last.current.year} onPlay={go} />}
+      {view.kind === 'landing' && (
+        <Landing initialUser={last.current.user} initialYear={last.current.year} onPlay={(u, y) => go(u, y, true)} />
+      )}
       {view.kind === 'loading' && <Loading user={view.user} onCancel={back} />}
       {view.kind === 'error' && (
-        <ErrorView error={view.error} user={view.user} onRetry={() => go(view.user, view.year)} onBack={back} />
+        <ErrorView error={view.error} user={view.user} onRetry={() => go(view.user, view.year, true)} onBack={back} />
       )}
-      {view.kind === 'player' && <PlayerView key={`${view.data.user}:${view.data.year}`} data={view.data} autoplay={view.autoplay} onBack={back} />}
+      {view.kind === 'player' && (
+        <PlayerView key={`${view.data.user}:${view.data.year}`} data={view.data} autoplay={view.autoplay} onBack={back} />
+      )}
     </>
   );
 }

@@ -104,6 +104,19 @@ select { appearance: none; -webkit-appearance: none; padding-right: 40px; backgr
   .play { width: auto; min-width: 220px; display: flex; margin-left: auto; margin-right: auto; }
 }
 
+/* Share */
+.share { margin-top: 36px; }
+.share h2 { font-size: 22px; letter-spacing: -0.01em; margin: 0 0 14px; }
+.card-preview { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--card); aspect-ratio: 1200 / 630; }
+.card-preview img { display: block; width: 100%; height: auto; }
+.card-skeleton { width: 100%; height: 100%; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%) 0 0 / 200% 100%; animation: sheen 1.4s linear infinite; }
+@keyframes sheen { to { background-position: -200% 0; } }
+.link-row { display: flex; gap: 10px; margin: 14px 0 10px; }
+.link { height: 48px; font-size: 16px; padding: 0 14px; min-width: 0; flex: 1; color: var(--muted); }
+.row.start { justify-content: flex-start; }
+.ghost:disabled { opacity: 0.45; cursor: default; }
+.note-live { min-height: 1.5em; margin: 10px 2px 0; color: var(--accent); font-size: 14px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .bars i { transform: scaleY(0.6); }

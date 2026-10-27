@@ -24,6 +24,8 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
   Pulses come from `song.events[].cell`, never from a separate timer.
 - Audio must start from a user tap: `unlockAudio()` runs inside the "Play my year" click; never start playback from a timer/effect
   unless it was unlocked by that tap. Respect `prefers-reduced-motion` in any new animation (canvas and CSS).
+- Share link is `/?u=&y=` (`src/url.ts`); always validate params with the server validators. The share card reuses
+  `drawFrame` and `buildCardModel`; keep card text free of forbidden branding (tested).
 - Keep the bundle small. Load Tone.js with dynamic `import()` on Play, not at startup.
 - Branding: say "for GitHub users". Never use GitHub's logo or the words "GitHub Wrapped".
 - Music: `src/music/mapping.ts` stays pure (no Tone import); all pitches go through `noteAt`; seed randomness from user+year.
