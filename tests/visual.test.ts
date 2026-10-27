@@ -3,21 +3,36 @@ import { FIXTURES } from '../server/fixtures';
 import { composeSong } from '../src/music/mapping';
 import { BeatClock } from '../src/visual/clock';
 import { cellX, cellY, COLS, computeLayout, ROWS } from '../src/visual/layout';
-import { PULSE_BEATS, activePulses, buildPulses } from '../src/visual/pulses';
+import { Particles } from '../src/visual/particles';
+import { PULSE_BEATS, activePulses, buildPulses, cellBeats, pulsesBetween } from '../src/visual/pulses';
+import { mulberry32 } from '../src/music/prng';
 
 describe('computeLayout', () => {
-  it.each([320, 360, 480, 768, 1200, 2000])('fits the grid inside %ipx', (w) => {
+  it.each([320, 360, 480, 639, 640, 768, 1200, 2000])('keeps every cell inside %ipx', (w) => {
     const l = computeLayout(w);
-    const right = cellX(l, COLS - 1) + l.cell;
-    const bottom = cellY(l, ROWS - 1) + l.cell;
+    for (let week = 0; week < COLS; week++) {
+      for (const day of [0, ROWS - 1]) {
+        const x = cellX(l, week);
+        const y = cellY(l, week, day);
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x + l.cell).toBeLessThanOrEqual(w);
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(y + l.cell).toBeLessThanOrEqual(l.height);
+      }
+    }
     expect(l.cell).toBeGreaterThanOrEqual(2);
-    expect(l.x0).toBeGreaterThanOrEqual(0);
-    expect(right).toBeLessThanOrEqual(w);
-    expect(bottom).toBeLessThanOrEqual(l.height);
-    expect(l.height).toBeLessThan(w); // wide, short strip: never taller than it is wide
+  });
+  it('wraps into two bands on phones so cells stay big enough to see', () => {
+    const phone = computeLayout(375);
+    expect(phone.bands).toBe(2);
+    expect(phone.cell).toBeGreaterThanOrEqual(10);
+    expect(computeLayout(1000).bands).toBe(1);
+    // week 26 starts the second band, directly under week 0
+    expect(cellX(phone, 26)).toBe(cellX(phone, 0));
+    expect(cellY(phone, 26, 0)).toBeGreaterThan(cellY(phone, 0, 6));
   });
   it('grows with the width', () => {
-    expect(computeLayout(1200).cell).toBeGreaterThan(computeLayout(400).cell);
+    expect(computeLayout(1200).cell).toBeGreaterThan(computeLayout(700).cell);
   });
 });
 
@@ -87,5 +102,57 @@ describe('pulses', () => {
       expect(src.beat).toBeLessThanOrEqual(beat);
       expect(src.beat).toBeGreaterThan(beat - PULSE_BEATS);
     }
+  });
+});
+
+describe('cell timing', () => {
+  it('lights every cell during its own week, active cells at their note', () => {
+    const song = composeSong(FIXTURES.active);
+    const pulses = buildPulses(song);
+    const beats = cellBeats(song, pulses);
+    expect(beats).toHaveLength(52);
+    for (let w = 0; w < 52; w++) {
+      for (let d = 0; d < 7; d++) {
+        expect(beats[w]![d]).toBeGreaterThanOrEqual(song.introBeats + w);
+        expect(beats[w]![d]).toBeLessThan(song.introBeats + w + 1);
+      }
+    }
+    // a strum: within an active week, cells light at different times
+    const w = FIXTURES.active.weeks.findIndex((wk) => wk.filter((l) => l > 0).length >= 4);
+    expect(new Set(beats[w]!.filter((_, d) => FIXTURES.active.weeks[w]![d]! > 0)).size).toBeGreaterThan(1);
+  });
+
+  it('pulsesBetween returns each pulse exactly once across consecutive frames', () => {
+    const pulses = buildPulses(composeSong(FIXTURES.weekend));
+    let seen = 0;
+    let from = 0;
+    for (const to of [3.3, 9, 9, 17.5, 30, 60]) {
+      seen += pulsesBetween(pulses, from, to).length;
+      from = to;
+    }
+    expect(seen).toBe(pulses.length);
+  });
+});
+
+describe('Particles', () => {
+  it('emits, rises, fades out, and respects the cap', () => {
+    const p = new Particles(mulberry32(1), 10);
+    p.emit(100, 100, 6);
+    p.emit(100, 100, 6);
+    expect(p.items.length).toBe(10);
+    const y0 = p.items[0]!.y;
+    p.step(0.1);
+    expect(p.items[0]!.y).toBeLessThan(y0); // rises
+    for (let i = 0; i < 40; i++) p.step(0.05);
+    expect(p.items).toHaveLength(0);
+  });
+  it('is deterministic for a given seed', () => {
+    const run = () => {
+      const p = new Particles(mulberry32(42));
+      p.emit(10, 10, 5);
+      p.step(0.016);
+      return p.items;
+    };
+    expect(run()).toEqual(run());
   });
 });

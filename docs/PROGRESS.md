@@ -24,13 +24,23 @@
 
 ## Phase 2: Visual
 - [x] Lead notes carry their `cell`; pulses derived from the song (one per active cell, tested)
-- [x] Canvas heatmap with playhead synced to the player's beat events (`BeatClock` + rAF)
-- [x] Note pulses scaled by level; per-genre palettes
-- [x] Responsive layout (320-2000 px tested) and DPR-aware canvas
-- [x] `prefers-reduced-motion`: stepped playhead, no pulses
-- [x] Checked in headless Chromium: 60 fps while playing, no console errors, screenshots at desktop, phone and reduced motion
+- [x] Canvas heatmap synced to the player's beat events (`BeatClock` + rAF), cells light one by one
+- [x] Glowing column sweep, note pulses scaled by level, sparks on loud notes, per-genre palettes
+- [x] Responsive: single band on desktop, two stacked bands on phones; DPR-aware
+- [x] `prefers-reduced-motion`: week-by-week lighting, stepped highlight, no pulses or sparks
 - [ ] Judge the look and the audio/visual sync by eye and ear (needs a human)
-- [ ] Wire `<Visual>` into the real app UI (currently only on `/dev-music.html`)
+
+## Phase 2b: Main experience
+- [x] Landing: big username input, year picker (default current year), pitch, "Play my year"; works on mobile (no horizontal scroll at 375 px)
+- [x] Input validation with inline messages; Loading view with rotating lines and Cancel
+- [x] Error views with personality for not found, invalid name, rate limit, network, upstream; Try again / Try another name
+- [x] Silent year: zero contributions plays the ambient track with a gentle note
+- [x] Player view: canvas graph, Play/Stop/Play again, live "Week N · dates" caption, stats (total, busiest week, longest streak, genre + key/BPM)
+- [x] Audio is only ever started from a tap: unlocked inside the "Play my year" tap, autoplay only if the browser allowed it, otherwise an explicit Play
+- [x] Original visual design (own wordmark, palette, layout); no GitHub logos or styling
+- [x] Browser-tested (headless Chromium, real autoplay policy): happy path, all error states, silent year, reduced motion, 375 px and desktop
+- [ ] Test on a real iPhone/Safari (the audio-unlock path is the riskiest part; headless Chromium can't prove it)
+- [ ] Remove `dev-music.html` + `src/dev/` once sound tuning is done (kept for now so the sound can be tuned)
 
 ## Phase 3: Share
 - [ ] PNG share card
@@ -38,7 +48,7 @@
 - [ ] Copy link / download buttons
 
 ## Phase 4: Polish and launch
-- [ ] Error, empty ("quiet year") and loading states
+- [x] Error, empty ("quiet year") and loading states (done in Phase 2b)
 - [ ] Accessibility pass
 - [ ] Open Graph preview image
 - [ ] README with demo; branding check

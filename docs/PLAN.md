@@ -79,20 +79,31 @@ Implemented in `src/music/`: `mapping.ts` (`composeSong(data) → Song`, plain J
   callback goes through `Tone.getDraw()` so visuals line up with what you hear. `renderSong` renders offline for
   tests and a future audio download. The mix has 3 dB headroom plus a limiter.
 
-## Visual and share
+## Experience and visual
 
-Implemented in `src/visual/`, rendered by `<Visual data song clock playing />` on a single canvas.
+**Flow** (`src/App.tsx`): Landing → Loading → Player, or → Error. "Play my year" is the user gesture: inside that tap the app
+calls `unlockAudio()` (resumes the audio context synchronously when Tone is already preloaded, which iOS Safari
+needs) and starts the fetch. When data arrives it autoplays only if the context really is running; otherwise the
+player view waits for an explicit Play tap. Stop/Play/Play again are always taps. Tone.js is preloaded on the first
+touch or keypress (not on page load), so the browser doesn't warn about an early audio context.
 
-- **Same events as the audio.** Each lead note in the song carries its graph cell (`cell: [week, day]`), so
-  `buildPulses(song)` yields exactly one pulse per active cell, firing on that cell's note. No second timing source.
-- **Sync:** the player's per-beat callback (via `Tone.getDraw()`, which compensates for audio latency) re-anchors a
-  `BeatClock`; `requestAnimationFrame` reads a smooth fractional beat from it. Re-anchoring every beat stops drift.
-- **Look:** the 52×7 heatmap fills in as the song reaches each week (unplayed columns are dimmed); a thin playhead glides
-  across; a cell swells and glows when its note fires, brighter for higher levels. Palette per genre (`palettes.ts`).
-- **Responsive:** `computeLayout(width)` sizes square cells to the container (tested 320-2000 px); the canvas is
-  DPR-aware and redraws on resize.
-- **Reduced motion** (`prefers-reduced-motion`): playhead steps once per beat, no pulses, glow or scaling.
-- The animation loop runs only while playing; idle it draws one static frame.
+**Views** (`src/views/`): Landing (username, year select, pitch), Loading (rotating lines, cancel), ErrorView
+(copy per error code in `src/copy.ts`: not found, bad name, rate limited, network, upstream), PlayerView (graph, play
+button, stats). A zero-contribution year plays the ambient piece with a "silent year" note. Stats live in
+`src/stats.ts`: total, busiest week (by level sum, as a date range), longest streak (approximate within a day or two of
+New Year's because week 0 also holds the folded-in last days of December), genre with key and BPM.
+
+**Visual** (`src/visual/`, one canvas):
+- **Same events as the audio.** Each lead note carries its graph cell (`cell: [week, day]`); `buildPulses` yields one
+  pulse per active cell and `cellBeats` the beat each cell lights at.
+- **Sync:** the player's per-beat callback (via `Tone.getDraw()`) re-anchors a `BeatClock`; `requestAnimationFrame` reads
+  a smooth fractional beat from it, so drift can't accumulate.
+- **Look:** cells light one by one as their notes sound (the strum order within a week is visible); a glowing column
+  sweep with a trailing wash; the cell that just fired swells and glows; loud notes (levels 3-4) throw capped, seeded
+  sparks. Colors come from a per-genre palette (`palettes.ts`), which also themes the page.
+- **Responsive:** `computeLayout(width)`: one 52-column band, or on phones (< 640 px) two stacked 26-week bands so cells
+  stay readable. DPR-aware; redraws on resize; the loop runs only while playing.
+- **Reduced motion:** columns light a week at a time, stepped column highlight, no glow, pulses or sparks (also no CSS animation).
 - **Share card:** client-side canvas → PNG (grid, total, top languages, year, "for GitHub users" line).
 - **Share link:** `/?u=&y=`; optional later: `api/og` for an Open Graph preview image.
 

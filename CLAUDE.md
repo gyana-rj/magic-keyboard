@@ -8,7 +8,8 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
 - `npm run dev`: Vite dev server; serves `/api/contributions` itself (fixtures unless `GITHUB_TOKEN` is set)
 - `npm run build`: typecheck (`tsc --noEmit`) + production build to `dist/`
 - `npm test`: Vitest, once (`tests/`)
-- `/dev-music.html` (while dev runs): temporary page to listen to fixtures. Remove with the real UI.
+- `/dev-music.html` (while dev runs): temporary page to tune the sound with fixtures. Remove after tuning.
+- In dev, type a fixture name as the username: `active`, `weekend`, `burst`, `empty`.
 - `npm run fixtures`: regenerate `fixtures/*.json` (deterministic; commit the output)
 
 ## Rules
@@ -21,6 +22,8 @@ Read `docs/PLAN.md` for architecture and the music mapping. Track work in `docs/
 - Relative imports under `api/` and `server/` use `.js` extensions (Vercel runs them as ESM).
 - Visual (`src/visual/`): pure modules (layout, clock, pulses) are unit-tested; `draw.ts`/`Visual.tsx` need a browser.
   Pulses come from `song.events[].cell`, never from a separate timer.
+- Audio must start from a user tap: `unlockAudio()` runs inside the "Play my year" click; never start playback from a timer/effect
+  unless it was unlocked by that tap. Respect `prefers-reduced-motion` in any new animation (canvas and CSS).
 - Keep the bundle small. Load Tone.js with dynamic `import()` on Play, not at startup.
 - Branding: say "for GitHub users". Never use GitHub's logo or the words "GitHub Wrapped".
 - Music: `src/music/mapping.ts` stays pure (no Tone import); all pitches go through `noteAt`; seed randomness from user+year.

@@ -1,61 +1,59 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import type { ContributionData } from '../shared/types';
-import { loadContributions } from './api';
+import { ContributionsError, loadContributions } from './api';
+import { unlockAudio } from './music/player';
+import { ErrorView } from './views/ErrorView';
+import { Landing } from './views/Landing';
+import { Loading } from './views/Loading';
+import { PlayerView } from './views/PlayerView';
 
-// Phase 0 placeholder: fetches data and shows the raw graph. Audio/visuals come in later phases.
+type View =
+  | { kind: 'landing' }
+  | { kind: 'loading'; user: string; year: number }
+  | { kind: 'player'; data: ContributionData; autoplay: boolean }
+  | { kind: 'error'; user: string; year: number; error: ContributionsError };
+
 export function App() {
-  const [user, setUser] = useState('active');
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [data, setData] = useState<ContributionData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<View>({ kind: 'landing' });
+  const last = useRef({ user: '', year: new Date().getFullYear() });
+  const run = useRef<AbortController | null>(null);
 
-  async function submit(e: Event) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      setData(await loadContributions(user.trim(), year));
-    } catch (err) {
-      setData(null);
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
-    }
+  /** Runs inside the tap on "Play my year": unlock audio right now, then fetch while it settles. */
+  function go(user: string, year: number) {
+    last.current = { user, year };
+    const unlocked = unlockAudio(); // must start inside the gesture; not awaited so the fetch isn't delayed
+    run.current?.abort();
+    const ctl = (run.current = new AbortController());
+    setView({ kind: 'loading', user, year });
+
+    loadContributions(user, year, ctl.signal)
+      .then(async (data) => {
+        const ok = await unlocked;
+        if (ctl.signal.aborted) return;
+        // If the browser refused to unlock audio, show the player and wait for an explicit Play tap.
+        setView({ kind: 'player', data, autoplay: ok });
+      })
+      .catch((err) => {
+        if (ctl.signal.aborted) return;
+        const error = err instanceof ContributionsError ? err : new ContributionsError('upstream_error', 'Unexpected error');
+        setView({ kind: 'error', user, year, error });
+      });
+  }
+
+  function back() {
+    run.current?.abort();
+    setView({ kind: 'landing' });
   }
 
   return (
-    <main>
-      <h1>Commit Symphony</h1>
-      <p>Your contribution year, as a 30-second song. Free and open source, for GitHub users.</p>
-      <form onSubmit={submit}>
-        <input value={user} onInput={(e) => setUser(e.currentTarget.value)} aria-label="GitHub username" />
-        <input
-          type="number"
-          value={year}
-          onInput={(e) => setYear(Number(e.currentTarget.value))}
-          aria-label="Year"
-        />
-        <button disabled={busy}>{busy ? 'Loading…' : 'Compose'}</button>
-      </form>
-      {error && <p role="alert">{error}</p>}
-      {data && (
-        <section>
-          <p>
-            {data.user} · {data.year} · {data.total} contributions
-            {data.total === 0 && ' (a quiet year)'}
-          </p>
-          <div class="grid" aria-hidden="true">
-            {data.weeks.map((week) => (
-              <div class="col">
-                {week.map((level) => (
-                  <span class={`cell l${level}`} />
-                ))}
-              </div>
-            ))}
-          </div>
-        </section>
+    <>
+      <div class="backdrop" aria-hidden="true" />
+      {view.kind === 'landing' && <Landing initialUser={last.current.user} initialYear={last.current.year} onPlay={go} />}
+      {view.kind === 'loading' && <Loading user={view.user} onCancel={back} />}
+      {view.kind === 'error' && (
+        <ErrorView error={view.error} user={view.user} onRetry={() => go(view.user, view.year)} onBack={back} />
       )}
-    </main>
+      {view.kind === 'player' && <PlayerView key={`${view.data.user}:${view.data.year}`} data={view.data} autoplay={view.autoplay} onBack={back} />}
+    </>
   );
 }

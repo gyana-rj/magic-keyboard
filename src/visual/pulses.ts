@@ -49,3 +49,27 @@ export function activePulses(pulses: Pulse[], beat: number, decay = PULSE_BEATS)
   }
   return out;
 }
+
+/** Pulses that fired in the half-open beat range (from, to]. */
+export function pulsesBetween(pulses: Pulse[], from: number, to: number): Pulse[] {
+  let lo = 0;
+  let hi = pulses.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (pulses[mid]!.beat <= from) lo = mid + 1;
+    else hi = mid;
+  }
+  const out: Pulse[] = [];
+  for (let i = lo; i < pulses.length && pulses[i]!.beat <= to; i++) out.push(pulses[i]!);
+  return out;
+}
+
+/**
+ * The beat at which each cell "lights up": its note for active cells, the start of its week for
+ * empty ones. This is what makes the graph fill in cell by cell, in the order you hear it.
+ */
+export function cellBeats(song: Song, pulses: Pulse[]): number[][] {
+  const grid = Array.from({ length: song.weekBeats }, (_, w) => Array<number>(7).fill(song.introBeats + w));
+  for (const p of pulses) grid[p.week]![p.day] = p.beat;
+  return grid;
+}
